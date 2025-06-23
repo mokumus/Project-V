@@ -51,8 +51,16 @@ namespace StarterAssets
 		[Tooltip("How far in degrees can you move the camera down")]
 		public float BottomClamp = -90.0f;
 
-		// cinemachine
-		private float _cinemachineTargetPitch;
+        [Header("Respawn")]
+        [Tooltip("Y position below which the player will respawn")]
+        public float FallThreshold = -20f;
+
+        [Tooltip("The position the player returns to after falling")]
+        public Vector3 RespawnPosition;
+
+
+        // cinemachine
+        private float _cinemachineTargetPitch;
 
 		// player
 		private float _speed;
@@ -115,7 +123,8 @@ namespace StarterAssets
 			JumpAndGravity();
 			GroundedCheck();
 			Move();
-		}
+            CheckFallRespawn();
+        }
 
 		private void LateUpdate()
 		{
@@ -264,5 +273,16 @@ namespace StarterAssets
 			// when selected, draw a gizmo in the position of, and matching radius of, the grounded collider
 			Gizmos.DrawSphere(new Vector3(transform.position.x, transform.position.y - GroundedOffset, transform.position.z), GroundedRadius);
 		}
-	}
+
+        private void CheckFallRespawn()
+        {
+            if (transform.position.y < FallThreshold)
+            {
+                _verticalVelocity = 0f;
+                _controller.enabled = false; // Required to teleport with CharacterController
+                transform.position = RespawnPosition;
+                _controller.enabled = true;
+            }
+        }
+    }
 }
