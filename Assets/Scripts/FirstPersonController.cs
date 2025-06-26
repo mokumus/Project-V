@@ -8,16 +8,17 @@ namespace StarterAssets
 	public class FirstPersonController : MonoBehaviour
 	{
 		[Header("Player")]
-		public float MoveSpeed = 4.0f;
-		public float SprintSpeed = 6.0f;
+		public float MoveSpeed = 8.0f;
+		public float SprintSpeed = 16.0f;
 		public float RotationSpeed = 1.0f;
 		public float SpeedChangeRate = 10.0f;
 
 		[Space(10)]
 		public float JumpHeight = 1.2f;
 		public float Gravity = -15.0f;
+        public float JumpMultiplier = 1f;
 
-		[Space(10)]
+        [Space(10)]
 		public float JumpTimeout = 0.1f;
 		public float FallTimeout = 0.15f;
 
@@ -146,7 +147,7 @@ namespace StarterAssets
 				
 				if (_input.jump && _jumpTimeoutDelta <= 0.0f)
 				{
-					_verticalVelocity = Mathf.Sqrt(JumpHeight * -2f * Gravity);
+					_verticalVelocity = Mathf.Sqrt(JumpHeight * JumpMultiplier * -2f * Gravity);
 					_jumpCount++;
 					_input.jump = false;
 				}
@@ -164,7 +165,7 @@ namespace StarterAssets
 				}
 				if (_input.jump && _jumpCount < ExtraJumpCount)
 				{
-					_verticalVelocity = Mathf.Sqrt(JumpHeight * -2f * Gravity);
+					_verticalVelocity = Mathf.Sqrt(JumpHeight * JumpMultiplier * -2f * Gravity);
 					_jumpCount++;
                     _input.jump = false;
 				}
