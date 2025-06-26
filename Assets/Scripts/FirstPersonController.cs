@@ -28,7 +28,11 @@ namespace StarterAssets
 		public float GroundedRadius = 0.5f;
 		public LayerMask GroundLayers;
 
-		[Header("Cinemachine")]
+        public float ClimbSpeed = 3f;
+        public int ExtraJumpCount = 1;
+
+
+        [Header("Cinemachine")]
 		public GameObject CinemachineCameraTarget;
 		public float TopClamp = 90.0f;
 		public float BottomClamp = -90.0f;
@@ -45,7 +49,10 @@ namespace StarterAssets
 		private float _jumpTimeoutDelta;
 		private float _fallTimeoutDelta;
 
-		private CharacterController _controller;
+        private bool _onLadder = false;
+        private Vector3 _ladderDirection = Vector3.up;
+
+        private CharacterController _controller;
 		private StarterAssetsInputs _input;
 		private PlayerInput _playerInput;
 		private GameObject _mainCamera;
@@ -53,7 +60,6 @@ namespace StarterAssets
 		private const float _threshold = 0.01f;
 
 		private int _jumpCount = 0;
-		public int ExtraJumpCount = 1;
 
 		private bool IsCurrentDeviceMouse => _playerInput.currentControlScheme == "KeyboardMouse";
 
@@ -108,35 +114,68 @@ namespace StarterAssets
 
 		private void Move()
 		{
-			float targetSpeed = _input.sprint ? SprintSpeed : MoveSpeed;
-			if (_input.move == Vector2.zero) targetSpeed = 0.0f;
-
-			float currentHorizontalSpeed = new Vector3(_controller.velocity.x, 0.0f, _controller.velocity.z).magnitude;
-			float speedOffset = 0.1f;
-			float inputMagnitude = _input.analogMovement ? _input.move.magnitude : 1f;
-
-			if (currentHorizontalSpeed < targetSpeed - speedOffset || currentHorizontalSpeed > targetSpeed + speedOffset)
+			if (_onLadder)
 			{
-				_speed = Mathf.Lerp(currentHorizontalSpeed, targetSpeed * inputMagnitude, Time.deltaTime * SpeedChangeRate);
-				_speed = Mathf.Round(_speed * 1000f) / 1000f;
+				float vertical = _input.move.y; // W/S or up/down
+				Vector3 climbMovement = _ladderDirection * vertical * ClimbSpeed * Time.deltaTime;
+				_controller.Move(climbMovement);
 			}
 			else
 			{
-				_speed = targetSpeed;
-			}
+				float targetSpeed = _input.sprint ? SprintSpeed : MoveSpeed;
+				if (_input.move == Vector2.zero) targetSpeed = 0.0f;
 
-			Vector3 inputDirection = new Vector3(_input.move.x, 0.0f, _input.move.y).normalized;
-			if (_input.move != Vector2.zero)
-			{
-				inputDirection = transform.right * _input.move.x + transform.forward * _input.move.y;
-			}
+				float currentHorizontalSpeed = new Vector3(_controller.velocity.x, 0.0f, _controller.velocity.z).magnitude;
+				float speedOffset = 0.1f;
+				float inputMagnitude = _input.analogMovement ? _input.move.magnitude : 1f;
 
-			_controller.Move(inputDirection.normalized * (_speed * Time.deltaTime) + new Vector3(0.0f, _verticalVelocity, 0.0f) * Time.deltaTime);
+				if (currentHorizontalSpeed < targetSpeed - speedOffset || currentHorizontalSpeed > targetSpeed + speedOffset)
+				{
+					_speed = Mathf.Lerp(currentHorizontalSpeed, targetSpeed * inputMagnitude, Time.deltaTime * SpeedChangeRate);
+					_speed = Mathf.Round(_speed * 1000f) / 1000f;
+				}
+				else
+				{
+					_speed = targetSpeed;
+				}
+
+				Vector3 inputDirection = new Vector3(_input.move.x, 0.0f, _input.move.y).normalized;
+				if (_input.move != Vector2.zero)
+				{
+					inputDirection = transform.right * _input.move.x + transform.forward * _input.move.y;
+				}
+
+				_controller.Move(inputDirection.normalized * (_speed * Time.deltaTime) + new Vector3(0.0f, _verticalVelocity, 0.0f) * Time.deltaTime);
+			}
 		}
 
 		private void JumpAndGravity()
 		{
-			if (Grounded)
+            if (_onLadder)
+            {
+                if (_onLadder)
+                {
+                    if (_input.jump)
+                    {
+                        _onLadder = false;
+                        _verticalVelocity = Mathf.Sqrt(JumpHeight * -2f * Gravity);
+                        Vector3 pushBack = -transform.forward * 0.05f;
+                        _controller.Move(pushBack); // move away from ladder
+                        _input.jump = false;
+                    }
+                    else
+                    {
+                        _verticalVelocity = 0f;
+                    }
+                    return;
+                }
+
+                // Disable gravity
+                _verticalVelocity = 0f;
+                return;
+            }
+
+            if (Grounded)
 			{
 				_fallTimeoutDelta = FallTimeout;
 				if (_verticalVelocity < 0.0f)
@@ -177,7 +216,20 @@ namespace StarterAssets
 			}
 		}
 
-		private static float ClampAngle(float lfAngle, float lfMin, float lfMax)
+        public void EnterLadder(Vector3 climbDirection)
+        {
+            _onLadder = true;
+            _ladderDirection = climbDirection;
+            _verticalVelocity = 0f; // stop falling
+        }
+
+        public void ExitLadder()
+        {
+            _onLadder = false;
+        }
+
+
+        private static float ClampAngle(float lfAngle, float lfMin, float lfMax)
 		{
 			if (lfAngle < -360f) lfAngle += 360f;
 			if (lfAngle > 360f) lfAngle -= 360f;
