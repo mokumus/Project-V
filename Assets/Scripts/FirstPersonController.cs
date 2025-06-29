@@ -28,7 +28,7 @@ namespace StarterAssets
 		public float GroundedRadius = 0.5f;
 		public LayerMask GroundLayers;
 
-        public float ClimbSpeed = 3f;
+        public float ClimbSpeed = 5f;
         public int ExtraJumpCount = 1;
 
 
